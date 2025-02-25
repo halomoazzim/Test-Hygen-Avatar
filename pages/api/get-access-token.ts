@@ -1,15 +1,19 @@
-import { NextResponse } from 'next/server';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-export async function POST() {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     // Get your HeyGen API key from environment variables
     const apiKey = process.env.HEYGEN_API_KEY;
     
     if (!apiKey) {
-      return NextResponse.json(
-        { error: 'HEYGEN_API_KEY is not set in environment variables' },
-        { status: 500 }
-      );
+      return res.status(500).json({ error: 'HEYGEN_API_KEY is not set in environment variables' });
     }
 
     // Make a request to HeyGen's token creation endpoint
@@ -46,10 +50,10 @@ export async function POST() {
         console.error('Error parsing error response:', parseError);
       }
       
-      return NextResponse.json(
-        { error: 'Failed to get session token from HeyGen API', details: errorMessage },
-        { status: response.status }
-      );
+      return res.status(response.status).json({ 
+        error: 'Failed to get session token from HeyGen API',
+        details: errorMessage
+      });
     }
 
     // Parse the successful response
@@ -57,22 +61,19 @@ export async function POST() {
     
     if (!data.data || !data.data.session_token) {
       console.error('Unexpected response format:', data);
-      return NextResponse.json(
-        { error: 'Invalid response format from HeyGen API', details: JSON.stringify(data) },
-        { status: 500 }
-      );
+      return res.status(500).json({ 
+        error: 'Invalid response format from HeyGen API',
+        details: JSON.stringify(data)
+      });
     }
     
     // Return the session token
-    return new NextResponse(data.data.session_token);
+    return res.status(200).send(data.data.session_token);
   } catch (error) {
     console.error('Error generating session token:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate session token',
-        details: error instanceof Error ? error.message : String(error)
-      },
-      { status: 500 }
-    );
+    return res.status(500).json({ 
+      error: 'Failed to generate session token',
+      details: error instanceof Error ? error.message : String(error)
+    });
   }
 } 
